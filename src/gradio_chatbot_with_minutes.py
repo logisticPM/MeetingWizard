@@ -708,75 +708,124 @@ class GradioChatbotWithMinutes:
                 upload_status = gr.Markdown("")
                 
                 def upload_to_anything_llm(transcript_id):
-                    """Upload a transcript and its minutes to AnythingLLM"""
+                    """Upload a transcript and its minutes to AnythingLLM or save to OpenAI as fallback"""
                     if not transcript_id:
                         return "Please select a transcript to upload."
-                     
-                    # First check if AnythingLLM is connected
-                    if not self.anything_llm_client or not self.check_anything_llm_connection():
-                        return "❌ AnythingLLM is not connected. Please check your settings and ensure AnythingLLM server is running."
-                     
+                    
+                    # Check if we have an OpenAI API key
+                    openai_api_key = self.settings.get("openai_api_key")
+                    if not openai_api_key:
+                        return "OpenAI API key not set. Please add your API key in the Settings tab."
+                    
                     try:
                         # Get the transcript and minutes
                         transcript = self.transcript_storage.get_transcript(transcript_id)
                         if not transcript:
                             return "Transcript not found."
-                         
+                        
                         transcript_text = self.transcript_storage.get_transcript_text(transcript_id)
                         if not transcript_text:
                             return "Transcript text not found."
-                         
+                        
                         # Check if there are meeting minutes
                         minutes = self.transcript_storage.get_meeting_minutes_by_transcript_id(transcript_id)
                         minutes_text = ""
                         if minutes:
                             minutes_text = self.transcript_storage.get_meeting_minutes_text(minutes["id"])
-                         
+                        
                         # Get meeting name from transcript metadata
                         meeting_name = "Unnamed Meeting"
                         if "meeting_name" in transcript:
                             meeting_name = transcript.get("meeting_name")
                         elif "metadata" in transcript and isinstance(transcript["metadata"], dict):
                             meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
-                         
+                        
                         # Create a temporary file with the content
                         temp_file_path = f"temp_meeting_{transcript_id}.md"
-                         
+                        
                         with open(temp_file_path, "w", encoding="utf-8") as f:
                             f.write(f"# {meeting_name}\n\n")
-                             
+                            
                             if minutes_text:
                                 f.write(f"## Meeting Minutes\n\n{minutes_text}\n\n")
-                             
+                            
                             f.write(f"## Full Transcript\n\n{transcript_text}\n\n")
-                         
-                        # Upload to AnythingLLM
-                        logger.info(f"Uploading {meeting_name} to AnythingLLM...")
-                        result = self.anything_llm_client.upload_document(
-                            file_path=temp_file_path,
-                            file_name=f"{meeting_name}.md"
-                        )
-                         
+                        
+                        # Try to upload to AnythingLLM first if it's connected
+                        anything_llm_success = False
+                        anything_llm_error = ""
+                        
+                        if self.anything_llm_client and self.check_anything_llm_connection():
+                            logger.info(f"Uploading {meeting_name} to AnythingLLM...")
+                            result = self.anything_llm_client.upload_document(
+                                file_path=temp_file_path,
+                                file_name=f"{meeting_name}.md"
+                            )
+                            
+                            if result and result.get("success", False):
+                                anything_llm_success = True
+                            else:
+                                error = result.get("error", "Unknown error")
+                                anything_llm_error = error
+                                logger.error(f"Failed to upload to AnythingLLM: {error}")
+                        else:
+                            anything_llm_error = "AnythingLLM is not connected"
+                            logger.warning("AnythingLLM is not connected, using OpenAI API as fallback")
+                        
+                        # If AnythingLLM upload failed or not connected, use OpenAI API
+                        openai_success = False
+                        openai_error = ""
+                        
+                        if not anything_llm_success:
+                            try:
+                                # Use OpenAI API to process the content
+                                import openai
+                                client = openai.OpenAI(api_key=openai_api_key)
+                                
+                                # Read the content from the temporary file
+                                with open(temp_file_path, "r", encoding="utf-8") as f:
+                                    content = f.read()
+                                
+                                # Create a file in OpenAI for reference
+                                file_response = client.files.create(
+                                    file=open(temp_file_path, "rb"),
+                                    purpose="assistants"
+                                )
+                                
+                                file_id = file_response.id
+                                logger.info(f"File uploaded to OpenAI with ID: {file_id}")
+                                
+                                # Store the file ID in the transcript metadata for future reference
+                                if "metadata" not in transcript:
+                                    transcript["metadata"] = {}
+                                
+                                if not isinstance(transcript["metadata"], dict):
+                                    transcript["metadata"] = {}
+                                
+                                transcript["metadata"]["openai_file_id"] = file_id
+                                self.transcript_storage.update_transcript(transcript_id, transcript)
+                                
+                                openai_success = True
+                            except Exception as e:
+                                openai_error = str(e)
+                                logger.error(f"Error using OpenAI API as fallback: {str(e)}")
+                        
                         # Clean up the temporary file
                         if os.path.exists(temp_file_path):
                             os.remove(temp_file_path)
-                         
-                        if result and result.get("success", False):
+                        
+                        # Return appropriate status message
+                        if anything_llm_success and openai_success:
+                            return f"✅ Successfully uploaded {meeting_name} to both AnythingLLM and OpenAI."
+                        elif anything_llm_success:
                             return f"✅ Successfully uploaded {meeting_name} to AnythingLLM."
+                        elif openai_success:
+                            return f"✅ Successfully saved {meeting_name} to OpenAI. AnythingLLM upload failed: {anything_llm_error}"
                         else:
-                            error = result.get("error", "Unknown error")
-                            logger.error(f"Failed to upload to AnythingLLM: {error}")
-                             
-                            # Provide a more helpful error message for common issues
-                            if "404" in str(error):
-                                return f"❌ Failed to upload to AnythingLLM: The API endpoint was not found (404 error). This may indicate that the AnythingLLM server is running but the document upload feature is not available or the API has changed."
-                            elif "Connection" in str(error):
-                                return f"❌ Failed to upload to AnythingLLM: Connection error. Please check that the AnythingLLM server is running and accessible."
-                            else:
-                                return f"❌ Failed to upload to AnythingLLM: {error}"
-                     
+                            return f"❌ Failed to upload to AnythingLLM: {anything_llm_error}. OpenAI fallback also failed: {openai_error}"
+                    
                     except Exception as e:
-                        logger.error(f"Error uploading to AnythingLLM: {str(e)}")
+                        logger.error(f"Error in upload process: {str(e)}")
                         return f"❌ Error: {str(e)}"
                 
                 upload_button.click(
