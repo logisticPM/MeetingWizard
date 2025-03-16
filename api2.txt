@@ -1,0 +1,2465 @@
+AnythingLLM Developer API
+ 1.0.0 
+OAS 3.0
+API endpoints that enable programmatic reading, writing, and updating of your AnythingLLM instance. UI supplied by Swagger.io.
+Servers
+/api
+Authorize
+Authentication
+GET
+/v1/auth
+Verify the attached Authentication header contains a valid API token.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	Valid auth token was found.
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "authenticated": true
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+Admin
+GET
+/v1/admin/is-multi-user-mode
+Check to see if the instance is in multi-user-mode first. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "isMultiUser": true
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+GET
+/v1/admin/users
+Check to see if the instance is in multi-user-mode first. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "users": [
+    {
+      "username": "sample-sam",
+      "role": "default"
+    }
+  ]
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/users/new
+Create a new user with username and password. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Key pair object that will define the new user to add to the system.
+•	Example Value
+{
+  "username": "sample-sam",
+  "password": "hunter2",
+  "role": "default | admin"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "user": {
+    "id": 1,
+    "username": "sample-sam",
+    "role": "default"
+  },
+  "error": null
+}	No links
+400	Bad Request	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/users/{id}
+Update existing user settings. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+Name	Description
+id *
+string
+(path)	id of the user in the database.
+Request body
+application/json
+Key pair object that will update the found user. All fields are optional and will not update unless specified.
+•	Example Value
+{
+  "username": "sample-sam",
+  "password": "hunter2",
+  "role": "default | admin",
+  "suspended": 0
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+DELETE
+/v1/admin/users/{id}
+Delete existing user by id. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+Name	Description
+id *
+string
+(path)	id of the user in the database.
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/admin/invites
+List all existing invitations to instance regardless of status. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "invites": [
+    {
+      "id": 1,
+      "status": "pending",
+      "code": "abc-123",
+      "claimedBy": null
+    }
+  ]
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/invite/new
+Create a new invite code for someone to use to register with instance. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Request body for creation parameters of the invitation
+•	Example Value
+{
+  "workspaceIds": [
+    1,
+    2,
+    45
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "invite": {
+    "id": 1,
+    "status": "pending",
+    "code": "abc-123"
+  },
+  "error": null
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+DELETE
+/v1/admin/invite/{id}
+Deactivates (soft-delete) invite by id. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+Name	Description
+id *
+string
+(path)	id of the invite in the database.
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/admin/workspaces/{workspaceId}/users
+Retrieve a list of users with permissions to access the specified workspace.
+Parameters
+Try it out
+Name	Description
+workspaceId *
+string
+(path)	id of the workspace.
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "users": [
+    {
+      "userId": 1,
+      "role": "admin"
+    },
+    {
+      "userId": 2,
+      "role": "member"
+    }
+  ]
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/workspaces/{workspaceId}/update-users
+POST
+/v1/admin/workspaces/{workspaceSlug}/manage-users
+Set workspace permissions to be accessible by the given user ids and admins. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+Name	Description
+workspaceSlug *
+string
+(path)	slug of the workspace in the database
+Request body
+application/json
+Array of user ids who will be given access to the target workspace. reset will remove all existing users from the workspace and only add the new users - default false.
+•	Example Value
+{
+  "userIds": [
+    1,
+    2,
+    4,
+    12
+  ],
+  "reset": false
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null,
+  "users": [
+    {
+      "userId": 1,
+      "username": "main-admin",
+      "role": "admin"
+    },
+    {
+      "userId": 2,
+      "username": "sample-sam",
+      "role": "default"
+    }
+  ]
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Not Found	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/workspace-chats
+All chats in the system ordered by most recent. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Page offset to show of workspace chats. All fields are optional and will not update unless specified.
+•	Example Value
+{
+  "offset": 2
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/admin/preferences
+Update multi-user preferences for instance. Methods are disabled until multi user mode is enabled via the UI.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Object with setting key and new value to set. All keys are optional and will not update unless specified.
+•	Example Value
+{
+  "support_email": "support@example.com"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+401	Instance is not in Multi-User mode. Method denied	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+Documents
+POST
+/v1/document/upload
+Upload a new file to AnythingLLM to be parsed and prepared for embedding.
+Parameters
+Try it out
+No parameters
+Request body
+multipart/form-data
+File to be uploaded.
+file *
+string($binary)	The file to upload
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null,
+  "documents": [
+    {
+      "location": "custom-documents/anythingllm.txt-6e8be64c-c162-4b43-9997-b068c0071e8b.json",
+      "name": "anythingllm.txt-6e8be64c-c162-4b43-9997-b068c0071e8b.json",
+      "url": "file://Users/tim/Documents/anything-llm/collector/hotdir/anythingllm.txt",
+      "title": "anythingllm.txt",
+      "docAuthor": "Unknown",
+      "description": "Unknown",
+      "docSource": "a text file uploaded by the user.",
+      "chunkSource": "anythingllm.txt",
+      "published": "1/16/2024, 3:07:00 PM",
+      "wordCount": 93,
+      "token_count_estimate": 115
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/document/upload/{folderName}
+Upload a new file to a specific folder in AnythingLLM to be parsed and prepared for embedding. If the folder does not exist, it will be created.
+Parameters
+Try it out
+Name	Description
+folderName *
+string
+(path)	Target folder path (defaults to 'custom-documents' if not provided)
+Example : my-folder
+Request body
+multipart/form-data
+File to be uploaded.
+file *
+string($binary)	The file to upload
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null,
+  "documents": [
+    {
+      "location": "custom-documents/anythingllm.txt-6e8be64c-c162-4b43-9997-b068c0071e8b.json",
+      "name": "anythingllm.txt-6e8be64c-c162-4b43-9997-b068c0071e8b.json",
+      "url": "file://Users/tim/Documents/anything-llm/collector/hotdir/anythingllm.txt",
+      "title": "anythingllm.txt",
+      "docAuthor": "Unknown",
+      "description": "Unknown",
+      "docSource": "a text file uploaded by the user.",
+      "chunkSource": "anythingllm.txt",
+      "published": "1/16/2024, 3:07:00 PM",
+      "wordCount": 93,
+      "token_count_estimate": 115
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error
+Media type
+application/json
+•	Example Value
+•	Schema
+{
+  "success": false,
+  "error": "Document processing API is not online. Document will not be processed automatically."
+}	No links
+POST
+/v1/document/upload-link
+Upload a valid URL for AnythingLLM to scrape and prepare for embedding.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Link of web address to be scraped.
+•	Example Value
+•	Schema
+{
+  "link": "https://anythingllm.com"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null,
+  "documents": [
+    {
+      "id": "c530dbe6-bff1-4b9e-b87f-710d539d20bc",
+      "url": "file://useanything_com.html",
+      "title": "useanything_com.html",
+      "docAuthor": "no author found",
+      "description": "No description found.",
+      "docSource": "URL link uploaded by the user.",
+      "chunkSource": "https:anythingllm.com.html",
+      "published": "1/16/2024, 3:46:33 PM",
+      "wordCount": 252,
+      "pageContent": "AnythingLLM is the best....",
+      "token_count_estimate": 447,
+      "location": "custom-documents/url-useanything_com-c530dbe6-bff1-4b9e-b87f-710d539d20bc.json"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/document/raw-text
+Upload a file by specifying its raw text content and metadata values without having to upload a file.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Text content and metadata of the file to be saved to the system. Use metadata-schema endpoint to get the possible metadata keys
+•	Example Value
+•	Schema
+{
+  "textContent": "This is the raw text that will be saved as a document in AnythingLLM.",
+  "metadata": {
+    "title": "This key is required. See in /server/endpoints/api/document/index.js:287",
+    "keyOne": "valueOne",
+    "keyTwo": "valueTwo",
+    "etc": "etc"
+  }
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null,
+  "documents": [
+    {
+      "id": "c530dbe6-bff1-4b9e-b87f-710d539d20bc",
+      "url": "file://my-document.txt",
+      "title": "hello-world.txt",
+      "docAuthor": "no author found",
+      "description": "No description found.",
+      "docSource": "My custom description set during upload",
+      "chunkSource": "no chunk source specified",
+      "published": "1/16/2024, 3:46:33 PM",
+      "wordCount": 252,
+      "pageContent": "AnythingLLM is the best....",
+      "token_count_estimate": 447,
+      "location": "custom-documents/raw-my-doc-text-c530dbe6-bff1-4b9e-b87f-710d539d20bc.json"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+422	Unprocessable Entity	No links
+500	Internal Server Error	No links
+GET
+/v1/documents
+List of all locally-stored documents in instance
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "localFiles": {
+    "name": "documents",
+    "type": "folder",
+    "items": [
+      {
+        "name": "my-stored-document.json",
+        "type": "file",
+        "id": "bb07c334-4dab-4419-9462-9d00065a49a1",
+        "url": "file://my-stored-document.txt",
+        "title": "my-stored-document.txt",
+        "cached": false
+      }
+    ]
+  }
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/documents/folder/{folderName}
+Get all documents stored in a specific folder.
+Parameters
+Try it out
+Name	Description
+folderName *
+string
+(path)	Name of the folder to retrieve documents from
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "folder": "custom-documents",
+  "documents": [
+    {
+      "name": "document1.json",
+      "type": "file",
+      "cached": false,
+      "pinnedWorkspaces": [],
+      "watched": false,
+      "more": "data"
+    },
+    {
+      "name": "document2.json",
+      "type": "file",
+      "cached": false,
+      "pinnedWorkspaces": [],
+      "watched": false,
+      "more": "data"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/document/accepted-file-types
+Check available filetypes and MIMEs that can be uploaded.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "types": {
+    "application/mbox": [
+      ".mbox"
+    ],
+    "application/pdf": [
+      ".pdf"
+    ],
+    "application/vnd.oasis.opendocument.text": [
+      ".odt"
+    ],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+      ".docx"
+    ],
+    "text/plain": [
+      ".txt",
+      ".md"
+    ]
+  }
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Not Found	No links
+500	Internal Server Error	No links
+GET
+/v1/document/metadata-schema
+Get the known available metadata schema for when doing a raw-text upload and the acceptable type of value for each key.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "schema": {
+    "keyOne": "string | number | nullable",
+    "keyTwo": "string | number | nullable",
+    "specialKey": "number",
+    "title": "string"
+  }
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/document/{docName}
+Get a single document by its unique AnythingLLM document name
+Parameters
+Try it out
+Name	Description
+docName *
+string
+(path)	Unique document name to find (name in /documents)
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "localFiles": {
+    "name": "documents",
+    "type": "folder",
+    "items": [
+      {
+        "name": "my-stored-document.txt-uuid1234.json",
+        "type": "file",
+        "id": "bb07c334-4dab-4419-9462-9d00065a49a1",
+        "url": "file://my-stored-document.txt",
+        "title": "my-stored-document.txt",
+        "cached": false
+      }
+    ]
+  }
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Not Found	No links
+500	Internal Server Error	No links
+POST
+/v1/document/create-folder
+Create a new folder inside the documents storage directory.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Name of the folder to create.
+•	Example Value
+•	Schema
+{
+  "name": "new-folder"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "message": null
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/document/move-files
+Move files within the documents storage directory.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Array of objects containing source and destination paths of files to move.
+•	Example Value
+•	Schema
+{
+  "files": [
+    {
+      "from": "custom-documents/file.txt-fc4beeeb-e436-454d-8bb4-e5b8979cb48f.json",
+      "to": "folder/file.txt-fc4beeeb-e436-454d-8bb4-e5b8979cb48f.json"
+    }
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "message": null
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+Workspaces
+POST
+/v1/workspace/new
+Create a new workspace
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+JSON object containing workspace configuration.
+•	Example Value
+{
+  "name": "My New Workspace",
+  "similarityThreshold": 0.7,
+  "openAiTemp": 0.7,
+  "openAiHistory": 20,
+  "openAiPrompt": "Custom prompt for responses",
+  "queryRefusalResponse": "Custom refusal message",
+  "chatMode": "chat",
+  "topN": 4
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "workspace": {
+    "id": 79,
+    "name": "Sample workspace",
+    "slug": "sample-workspace",
+    "createdAt": "2023-08-17 00:45:03",
+    "openAiTemp": null,
+    "lastUpdatedAt": "2023-08-17 00:45:03",
+    "openAiHistory": 20,
+    "openAiPrompt": null
+  },
+  "message": "Workspace created"
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/workspaces
+List all current workspaces
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "workspaces": [
+    {
+      "id": 79,
+      "name": "Sample workspace",
+      "slug": "sample-workspace",
+      "createdAt": "2023-08-17 00:45:03",
+      "openAiTemp": null,
+      "lastUpdatedAt": "2023-08-17 00:45:03",
+      "openAiHistory": 20,
+      "openAiPrompt": null,
+      "threads": []
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/workspace/{slug}
+Get a workspace by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to find
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "workspace": [
+    {
+      "id": 79,
+      "name": "My workspace",
+      "slug": "my-workspace-123",
+      "createdAt": "2023-08-17 00:45:03",
+      "openAiTemp": null,
+      "lastUpdatedAt": "2023-08-17 00:45:03",
+      "openAiHistory": 20,
+      "openAiPrompt": null,
+      "documents": [],
+      "threads": []
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+DELETE
+/v1/workspace/{slug}
+Deletes a workspace by its slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to delete
+Responses
+Code	Description	Links
+200	OK	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/update
+Update workspace settings by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to find
+Request body
+application/json
+JSON object containing new settings to update a workspace. All keys are optional and will not update unless provided
+•	Example Value
+{
+  "name": "Updated Workspace Name",
+  "openAiTemp": 0.2,
+  "openAiHistory": 20,
+  "openAiPrompt": "Respond to all inquires and questions in binary - do not respond in any other format."
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "workspace": {
+    "id": 79,
+    "name": "My workspace",
+    "slug": "my-workspace-123",
+    "createdAt": "2023-08-17 00:45:03",
+    "openAiTemp": null,
+    "lastUpdatedAt": "2023-08-17 00:45:03",
+    "openAiHistory": 20,
+    "openAiPrompt": null,
+    "documents": []
+  },
+  "message": null
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/workspace/{slug}/chats
+Get a workspaces chats regardless of user by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to find
+apiSessionId
+string
+(query)	Optional apiSessionId to filter by
+limit
+integer
+(query)	Optional number of chat messages to return (default: 100)
+orderBy
+string
+(query)	Optional order of chat messages (asc or desc)
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "history": [
+    {
+      "role": "user",
+      "content": "What is AnythingLLM?",
+      "sentAt": 1692851630
+    },
+    {
+      "role": "assistant",
+      "content": "AnythingLLM is a platform that allows you to convert notes, PDFs, and other source materials into a chatbot. It ensures privacy, cites its answers, and allows multiple people to interact with the same documents simultaneously. It is particularly useful for businesses to enhance the visibility and readability of various written communications such as SOPs, contracts, and sales calls. You can try it out with a free trial to see if it meets your business needs.",
+      "sources": [
+        {
+          "source": "object about source document and snippets used"
+        }
+      ]
+    }
+  ]
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/update-embeddings
+Add or remove documents from a workspace by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to find
+Request body
+application/json
+JSON object of additions and removals of documents to add to update a workspace. The value should be the folder + filename with the exclusions of the top-level documents path.
+•	Example Value
+{
+  "adds": [
+    "custom-documents/my-pdf.pdf-hash.json"
+  ],
+  "deletes": [
+    "custom-documents/anythingllm.txt-hash.json"
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "workspace": {
+    "id": 79,
+    "name": "My workspace",
+    "slug": "my-workspace-123",
+    "createdAt": "2023-08-17 00:45:03",
+    "openAiTemp": null,
+    "lastUpdatedAt": "2023-08-17 00:45:03",
+    "openAiHistory": 20,
+    "openAiPrompt": null,
+    "documents": []
+  },
+  "message": null
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/update-pin
+Add or remove pin from a document in a workspace by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to find
+Request body
+application/json
+JSON object with the document path and pin status to update.
+•	Example Value
+{
+  "docPath": "custom-documents/my-pdf.pdf-hash.json",
+  "pinStatus": true
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "message": "Pin status updated successfully"
+}	No links
+403	Forbidden	No links
+404	Document not found	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/chat
+Execute a chat with a workspace
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	
+Request body
+application/json
+Send a prompt to the workspace and the type of conversation (query or chat).
+Query: Will not use LLM unless there are relevant sources from vectorDB & does not recall chat history.
+Chat: Uses LLM general knowledge w/custom embeddings to produce output, uses rolling chat history.
+•	Example Value
+{
+  "message": "What is AnythingLLM?",
+  "mode": "query | chat",
+  "sessionId": "identifier-to-partition-chats-by-external-id",
+  "attachments": [
+    {
+      "name": "image.png",
+      "mime": "image/png",
+      "contentString": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "id": "chat-uuid",
+  "type": "abort | textResponse",
+  "textResponse": "Response to your query",
+  "sources": [
+    {
+      "title": "anythingllm.txt",
+      "chunk": "This is a context chunk used in the answer of the prompt by the LLM,"
+    }
+  ],
+  "close": true,
+  "error": "null | text string of the failure mode."
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/stream-chat
+Execute a streamable chat with a workspace
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	
+Request body
+application/json
+Send a prompt to the workspace and the type of conversation (query or chat).
+Query: Will not use LLM unless there are relevant sources from vectorDB & does not recall chat history.
+Chat: Uses LLM general knowledge w/custom embeddings to produce output, uses rolling chat history.
+•	Example Value
+{
+  "message": "What is AnythingLLM?",
+  "mode": "query | chat",
+  "sessionId": "identifier-to-partition-chats-by-external-id",
+  "attachments": [
+    {
+      "name": "image.png",
+      "mime": "image/png",
+      "contentString": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+text/event-stream
+Controls Accept header.
+•	Example Value
+•	Schema
+[
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "First chunk",
+    "sources": [],
+    "close": false,
+    "error": "null | text string of the failure mode."
+  },
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "chunk two",
+    "sources": [],
+    "close": false,
+    "error": "null | text string of the failure mode."
+  },
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "final chunk of LLM output!",
+    "sources": [
+      {
+        "title": "anythingllm.txt",
+        "chunk": "This is a context chunk used in the answer of the prompt by the LLM. This will only return in the final chunk."
+      }
+    ],
+    "close": true,
+    "error": "null | text string of the failure mode."
+  }
+]	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+POST
+/v1/workspace/{slug}/vector-search
+Perform a vector similarity search in a workspace
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace to search in
+Request body
+application/json
+Query to perform vector search with and optional parameters
+•	Example Value
+{
+  "query": "What is the meaning of life?",
+  "topN": 4,
+  "scoreThreshold": 0.75
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "results": [
+    {
+      "id": "5a6bee0a-306c-47fc-942b-8ab9bf3899c4",
+      "text": "Document chunk content...",
+      "metadata": {
+        "url": "file://document.txt",
+        "title": "document.txt",
+        "author": "no author specified",
+        "description": "no description found",
+        "docSource": "post:123456",
+        "chunkSource": "document.txt",
+        "published": "12/1/2024, 11:39:39 AM",
+        "wordCount": 8,
+        "tokenCount": 9
+      },
+      "distance": 0.541887640953064,
+      "score": 0.45811235904693604
+    }
+  ]
+}	No links
+400	Bad Request	No links
+403	Forbidden	No links
+500	Internal Server Error	No links
+System Settings
+GET
+/v1/system/env-dump
+Dump all settings to file storage
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/system
+Get all current system settings that are defined.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "settings": {
+    "VectorDB": "pinecone",
+    "PineConeKey": true,
+    "PineConeIndex": "my-pinecone-index",
+    "LLMProvider": "azure",
+    "[KEY_NAME]": "KEY_VALUE"
+  }
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/system/vector-count
+Number of all vectors in connected vector database
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "vectorCount": 5450
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/system/update-env
+Update a system setting or preference.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Key pair object that matches a valid setting and value. Get keys from GET /v1/system or refer to codebase.
+•	Example Value
+{
+  "VectorDB": "lancedb",
+  "AnotherKey": "updatedValue"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "newValues": {
+    "[ENV_KEY]": "Value"
+  },
+  "error": "error goes here, otherwise null"
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/system/export-chats
+Export all of the chats from the system in a known format. Output depends on the type sent. Will be send with the correct header for the output.
+Parameters
+Try it out
+Name	Description
+type
+string
+(query)	Export format jsonl, json, csv, jsonAlpaca
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+[
+  {
+    "role": "user",
+    "content": "What is AnythinglLM?"
+  },
+  {
+    "role": "assistant",
+    "content": "AnythingLLM is a knowledge graph and vector database management system built using NodeJS express server. It provides an interface for handling all interactions, including vectorDB management and LLM (Language Model) interactions."
+  }
+]	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+DELETE
+/v1/system/remove-documents
+Permanently remove documents from the system.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Array of document names to be removed permanently.
+•	Example Value
+•	Schema
+{
+  "names": [
+    "custom-documents/file.txt-fc4beeeb-e436-454d-8bb4-e5b8979cb48f.json"
+  ]
+}
+Responses
+Code	Description	Links
+200	Documents removed successfully.
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "message": "Documents removed successfully"
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+Workspace Threads
+POST
+/v1/workspace/{slug}/thread/new
+Create a new workspace thread
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+Request body
+application/json
+Optional userId associated with the thread, thread slug and thread name
+•	Example Value
+{
+  "userId": 1,
+  "name": "Name",
+  "slug": "thread-slug"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "thread": {
+    "id": 1,
+    "name": "Thread",
+    "slug": "thread-uuid",
+    "user_id": 1,
+    "workspace_id": 1
+  },
+  "message": null
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/thread/{threadSlug}/update
+Update thread name by its unique slug.
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+threadSlug *
+string
+(path)	Unique slug of thread
+Request body
+application/json
+JSON object containing new name to update the thread.
+•	Example Value
+{
+  "name": "Updated Thread Name"
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "thread": {
+    "id": 1,
+    "name": "Updated Thread Name",
+    "slug": "thread-uuid",
+    "user_id": 1,
+    "workspace_id": 1
+  },
+  "message": null
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+DELETE
+/v1/workspace/{slug}/thread/{threadSlug}
+Delete a workspace thread
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+threadSlug *
+string
+(path)	Unique slug of thread
+Responses
+Code	Description	Links
+200	Thread deleted successfully	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/workspace/{slug}/thread/{threadSlug}/chats
+Get chats for a workspace thread
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+threadSlug *
+string
+(path)	Unique slug of thread
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "history": [
+    {
+      "role": "user",
+      "content": "What is AnythingLLM?",
+      "sentAt": 1692851630
+    },
+    {
+      "role": "assistant",
+      "content": "AnythingLLM is a platform that allows you to convert notes, PDFs, and other source materials into a chatbot. It ensures privacy, cites its answers, and allows multiple people to interact with the same documents simultaneously. It is particularly useful for businesses to enhance the visibility and readability of various written communications such as SOPs, contracts, and sales calls. You can try it out with a free trial to see if it meets your business needs.",
+      "sources": [
+        {
+          "source": "object about source document and snippets used"
+        }
+      ]
+    }
+  ]
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/thread/{threadSlug}/chat
+Chat with a workspace thread
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+threadSlug *
+string
+(path)	Unique slug of thread
+Request body
+application/json
+Send a prompt to the workspace thread and the type of conversation (query or chat).
+•	Example Value
+{
+  "message": "What is AnythingLLM?",
+  "mode": "query | chat",
+  "userId": 1,
+  "attachments": [
+    {
+      "name": "image.png",
+      "mime": "image/png",
+      "contentString": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "id": "chat-uuid",
+  "type": "abort | textResponse",
+  "textResponse": "Response to your query",
+  "sources": [
+    {
+      "title": "anythingllm.txt",
+      "chunk": "This is a context chunk used in the answer of the prompt by the LLM."
+    }
+  ],
+  "close": true,
+  "error": "null | text string of the failure mode."
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/workspace/{slug}/thread/{threadSlug}/stream-chat
+Stream chat with a workspace thread
+Parameters
+Try it out
+Name	Description
+slug *
+string
+(path)	Unique slug of workspace
+threadSlug *
+string
+(path)	Unique slug of thread
+Request body
+application/json
+Send a prompt to the workspace thread and the type of conversation (query or chat).
+•	Example Value
+{
+  "message": "What is AnythingLLM?",
+  "mode": "query | chat",
+  "userId": 1,
+  "attachments": [
+    {
+      "name": "image.png",
+      "mime": "image/png",
+      "contentString": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+    }
+  ]
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+text/event-stream
+Controls Accept header.
+•	Example Value
+•	Schema
+[
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "First chunk",
+    "sources": [],
+    "close": false,
+    "error": "null | text string of the failure mode."
+  },
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "chunk two",
+    "sources": [],
+    "close": false,
+    "error": "null | text string of the failure mode."
+  },
+  {
+    "id": "uuid-123",
+    "type": "abort | textResponseChunk",
+    "textResponse": "final chunk of LLM output!",
+    "sources": [
+      {
+        "title": "anythingllm.txt",
+        "chunk": "This is a context chunk used in the answer of the prompt by the LLM. This will only return in the final chunk."
+      }
+    ],
+    "close": true,
+    "error": "null | text string of the failure mode."
+  }
+]	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+User Management
+GET
+/v1/users
+List all users
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "john_doe",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "username": "jane_smith",
+      "role": "default"
+    }
+  ]
+}	No links
+401	Instance is not in Multi-User mode. Permission denied.	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+OpenAI Compatible Endpoints
+GET
+/v1/openai/models
+Get all available "models" which are workspaces you can use for chatting.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "models": [
+    {
+      "name": "Sample workspace",
+      "model": "sample-workspace",
+      "llm": {
+        "provider": "ollama",
+        "model": "llama3:8b"
+      }
+    },
+    {
+      "name": "Second workspace",
+      "model": "workspace-2",
+      "llm": {
+        "provider": "openai",
+        "model": "gpt-3.5-turbo"
+      }
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/openai/chat/completions
+Execute a chat with a workspace with OpenAI compatibility. Supports streaming as well. Model must be a workspace slug from /models.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+Send a prompt to the workspace with full use of documents as if sending a chat in AnythingLLM. Only supports some values of OpenAI API. See example below.
+•	Example Value
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant"
+    },
+    {
+      "role": "user",
+      "content": "What is AnythingLLM?"
+    },
+    {
+      "role": "assistant",
+      "content": "AnythingLLM is...."
+    },
+    {
+      "role": "user",
+      "content": "Follow up question..."
+    }
+  ],
+  "model": "sample-workspace",
+  "stream": true,
+  "temperature": 0.7
+}
+Responses
+Code	Description	Links
+200	OK	No links
+400	Bad Request	No links
+401	Unauthorized	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+POST
+/v1/openai/embeddings
+Get the embeddings of any arbitrary text string. This will use the embedder provider set in the system. Please ensure the token length of each string fits within the context of your embedder model.
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+The input string(s) to be embedded. If the text is too long for the embedder model context, it will fail to embed. The vector and associated chunk metadata will be returned in the array order provided
+•	Example Value
+{
+  "inputs": [
+    "This is my first string to embed",
+    "This is my second string to embed"
+  ],
+  "model": null
+}
+Responses
+Code	Description	Links
+200	OK	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/openai/vector_stores
+List all the vector database collections connected to AnythingLLM. These are essentially workspaces but return their unique vector db identifier - this is the same as the workspace slug.
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "data": [
+    {
+      "id": "slug-here",
+      "object": "vector_store",
+      "name": "My workspace",
+      "file_counts": {
+        "total": 3
+      },
+      "provider": "LanceDB"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+Embed
+GET
+/v1/embed
+List all active embeds
+Parameters
+Try it out
+No parameters
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "embeds": [
+    {
+      "id": 1,
+      "uuid": "embed-uuid-1",
+      "enabled": true,
+      "chat_mode": "query",
+      "createdAt": "2023-04-01T12:00:00Z",
+      "workspace": {
+        "id": 1,
+        "name": "Workspace 1"
+      },
+      "chat_count": 10
+    },
+    {
+      "id": 2,
+      "uuid": "embed-uuid-2",
+      "enabled": false,
+      "chat_mode": "chat",
+      "createdAt": "2023-04-02T14:30:00Z",
+      "workspace": {
+        "id": 1,
+        "name": "Workspace 1"
+      },
+      "chat_count": 10
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+500	Internal Server Error	No links
+GET
+/v1/embed/{embedUuid}/chats
+Get all chats for a specific embed
+Parameters
+Try it out
+Name	Description
+embedUuid *
+string
+(path)	UUID of the embed
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "chats": [
+    {
+      "id": 1,
+      "session_id": "session-uuid-1",
+      "prompt": "Hello",
+      "response": "Hi there!",
+      "createdAt": "2023-04-01T12:00:00Z"
+    },
+    {
+      "id": 2,
+      "session_id": "session-uuid-2",
+      "prompt": "How are you?",
+      "response": "I'm doing well, thank you!",
+      "createdAt": "2023-04-02T14:30:00Z"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Embed not found	No links
+500	Internal Server Error	No links
+GET
+/v1/embed/{embedUuid}/chats/{sessionUuid}
+Get chats for a specific embed and session
+Parameters
+Try it out
+Name	Description
+embedUuid *
+string
+(path)	UUID of the embed
+sessionUuid *
+string
+(path)	UUID of the session
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "chats": [
+    {
+      "id": 1,
+      "prompt": "Hello",
+      "response": "Hi there!",
+      "createdAt": "2023-04-01T12:00:00Z"
+    }
+  ]
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Embed or session not found	No links
+500	Internal Server Error	No links
+POST
+/v1/embed/new
+Create a new embed configuration
+Parameters
+Try it out
+No parameters
+Request body
+application/json
+JSON object containing embed configuration details
+•	Example Value
+•	Schema
+{
+  "workspace_slug": "workspace-slug-1",
+  "chat_mode": "chat",
+  "allowlist_domains": [
+    "example.com"
+  ],
+  "allow_model_override": false,
+  "allow_temperature_override": false,
+  "allow_prompt_override": false,
+  "max_chats_per_day": 100,
+  "max_chats_per_session": 10
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "embed": {
+    "id": 1,
+    "uuid": "embed-uuid-1",
+    "enabled": true,
+    "chat_mode": "chat",
+    "allowlist_domains": [
+      "example.com"
+    ],
+    "allow_model_override": false,
+    "allow_temperature_override": false,
+    "allow_prompt_override": false,
+    "max_chats_per_day": 100,
+    "max_chats_per_session": 10,
+    "createdAt": "2023-04-01T12:00:00Z",
+    "workspace_slug": "workspace-slug-1"
+  },
+  "error": null
+}	No links
+400	Bad Request	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Workspace not found	No links
+500	Internal Server Error	No links
+POST
+/v1/embed/{embedUuid}
+Update an existing embed configuration
+Parameters
+Try it out
+Name	Description
+embedUuid *
+string
+(path)	UUID of the embed to update
+Request body
+application/json
+JSON object containing embed configuration updates
+•	Example Value
+•	Schema
+{
+  "enabled": true,
+  "chat_mode": "chat",
+  "allowlist_domains": [
+    "example.com"
+  ],
+  "allow_model_override": false,
+  "allow_temperature_override": false,
+  "allow_prompt_override": false,
+  "max_chats_per_day": 100,
+  "max_chats_per_session": 10
+}
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Embed not found	No links
+500	Internal Server Error	No links
+DELETE
+/v1/embed/{embedUuid}
+Delete an existing embed configuration
+Parameters
+Try it out
+Name	Description
+embedUuid *
+string
+(path)	UUID of the embed to delete
+Responses
+Code	Description	Links
+200	OK
+Media type
+application/json
+Controls Accept header.
+•	Example Value
+•	Schema
+{
+  "success": true,
+  "error": null
+}	No links
+403	Forbidden
+Media type
+application/jsonapplication/xml
+•	Example Value
+•	Schema
+{
+  "message": "Invalid API Key"
+}	No links
+404	Embed not found	No links
+500	Internal Server Error	No links
+Schemas
+InvalidAPIKey
+
