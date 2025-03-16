@@ -485,7 +485,7 @@ class GradioChatbotWithMinutes:
             # anything_llm_connection_status.update(update_connection_status())
             
             # Chat interface
-            chatbot = gr.Chatbot(height=400, type="messages")
+            chatbot = gr.Chatbot(height=400)
             
             with gr.Row():
                 chat_input = gr.Textbox(
@@ -518,14 +518,99 @@ class GradioChatbotWithMinutes:
                     # Check if we have an OpenAI API key
                     openai_api_key = self.settings.get("openai_api_key")
                     if not openai_api_key:
-                        return history + [[message, "OpenAI API key not set. Please add your API key in the Settings tab."]]
+                        history.append((message, "OpenAI API key not set. Please add your API key in the Settings tab."))
+                        return history
                     
                     # Prepare the message with local context if enabled
                     enhanced_message = message
                     system_message = "You are a helpful assistant that specializes in analyzing meeting transcripts and minutes."
                     local_context = ""
                     
-                    if include_local_data:
+                    # Check if the message is asking about a specific meeting by ID or name
+                    specific_meeting_id = None
+                    import re
+                    
+                    # Look for meeting ID patterns in the message
+                    id_pattern = r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+                    id_matches = re.findall(id_pattern, message)
+                    
+                    # Look for meeting name patterns like "what happened in the demo"
+                    name_pattern = r'what happened in(?: the)? (.+?)(?:\s*-|\s*\(|$)'
+                    name_matches = re.search(name_pattern, message.lower())
+                    
+                    meeting_name_to_find = None
+                    if name_matches:
+                        meeting_name_to_find = name_matches.group(1).strip()
+                    
+                    # If we found potential meeting IDs or names, try to find the corresponding transcript
+                    if id_matches or meeting_name_to_find:
+                        logger.info(f"Looking for specific meeting: ID={id_matches}, Name={meeting_name_to_find}")
+                        
+                        # Get all transcripts
+                        all_transcripts = self.transcript_storage.get_all_transcripts()
+                        
+                        if "transcripts" in all_transcripts:
+                            for transcript in all_transcripts["transcripts"]:
+                                # Check if this transcript matches any of our criteria
+                                transcript_id = transcript.get("id", "")
+                                
+                                # Get the meeting name from the transcript
+                                meeting_name = transcript.get("meeting_name", "")
+                                if not meeting_name and isinstance(transcript.get("metadata"), dict):
+                                    meeting_name = transcript["metadata"].get("meeting_name", "")
+                                
+                                # Check if this transcript matches our search criteria
+                                id_match = any(tid in transcript_id for tid in id_matches)
+                                name_match = meeting_name_to_find and meeting_name_to_find.lower() in meeting_name.lower()
+                                
+                                if id_match or name_match:
+                                    logger.info(f"Found matching transcript: {transcript_id} - {meeting_name}")
+                                    specific_meeting_id = transcript_id
+                                    break
+                    
+                    # If we found a specific meeting, prioritize getting its content
+                    if specific_meeting_id:
+                        logger.info(f"Getting content for specific meeting: {specific_meeting_id}")
+                        
+                        # Get the transcript text
+                        transcript_text = self.transcript_storage.get_transcript_text(specific_meeting_id)
+                        
+                        # Get the meeting name
+                        transcript = self.transcript_storage.get_transcript(specific_meeting_id)
+                        meeting_name = "Unnamed Meeting"
+                        if transcript:
+                            if "meeting_name" in transcript:
+                                meeting_name = transcript.get("meeting_name")
+                            elif "metadata" in transcript and isinstance(transcript["metadata"], dict):
+                                meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
+                        
+                        # Get the meeting minutes if they exist
+                        minutes_text = ""
+                        minutes = self.transcript_storage.get_meeting_minutes_by_transcript_id(specific_meeting_id)
+                        if minutes:
+                            minutes_text = self.transcript_storage.get_meeting_minutes_text(minutes["id"])
+                        
+                        # Build the context with both transcript and minutes
+                        if transcript_text or minutes_text:
+                            context_parts = []
+                            
+                            if minutes_text:
+                                # Truncate minutes text if it's too long
+                                if len(minutes_text) > 2000:
+                                    minutes_text = minutes_text[:2000] + "..."
+                                context_parts.append(f"--- Meeting Minutes: {meeting_name} ---\n{minutes_text}\n")
+                            
+                            if transcript_text:
+                                # Truncate transcript text if it's too long
+                                if len(transcript_text) > 3000:
+                                    transcript_text = transcript_text[:3000] + "..."
+                                context_parts.append(f"--- Transcript: {meeting_name} ---\n{transcript_text}\n")
+                            
+                            local_context = "\n".join(context_parts)
+                            logger.info(f"Added specific meeting context: {len(local_context)} characters")
+                    
+                    # If we don't have a specific meeting or if include_local_data is True, add general context
+                    if not specific_meeting_id and include_local_data:
                         # Get local context if requested
                         if hasattr(self.transcript_storage, 'search_transcripts') and hasattr(self.transcript_storage, 'search_minutes'):
                             # Search transcripts
@@ -603,16 +688,17 @@ class GradioChatbotWithMinutes:
                                                 meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
                                             
                                             local_context += f"--- Transcript: {meeting_name} ---\n{transcript_text}\n\n"
+                    
+                    if local_context:
+                        system_message = f"""You are a helpful assistant that specializes in analyzing meeting transcripts and minutes.
                         
-                        if local_context:
-                            system_message = f"""You are a helpful assistant that specializes in analyzing meeting transcripts and minutes.
-                            
-                            Here is some relevant context from meeting transcripts and minutes:
-                            
-                            {local_context}
-                            
-                            Use this context to answer the user's questions when relevant."""
-                            enhanced_message = f"Based on the provided context, please answer: {message}"
+                        Here is some relevant context from meeting transcripts and minutes:
+                        
+                        {local_context}
+                        
+                        Use this context to answer the user's questions when relevant."""
+                        enhanced_message = f"Based on the provided context, please answer: {message}"
+                        logger.info(f"Added context to prompt: {len(local_context)} characters")
                     
                     # First try AnythingLLM if it's available
                     anything_llm_working = False
@@ -631,7 +717,7 @@ class GradioChatbotWithMinutes:
                                 response = response_data.get("response", "")
                                 if response.strip():  # Check if we got a non-empty response
                                     anything_llm_working = True
-                                    return history + [[message, response]]
+                                    return history + [(message, response)]
                         except Exception as e:
                             logger.warning(f"AnythingLLM chat failed, falling back to OpenAI: {str(e)}")
                     
@@ -649,10 +735,12 @@ class GradioChatbotWithMinutes:
                         if mode == "chat" and len(history) > 1:
                             # Add up to 5 previous exchanges (10 messages) for context
                             for i in range(max(0, len(history) - 5), len(history)):
-                                if history[i][0]:  # User message
-                                    messages.append({"role": "user", "content": history[i][0]})
-                                if history[i][1]:  # Assistant message
-                                    messages.append({"role": "assistant", "content": history[i][1]})
+                                if i < len(history):
+                                    user_msg, assistant_msg = history[i]
+                                    if user_msg:  # User message
+                                        messages.append({"role": "user", "content": user_msg})
+                                    if assistant_msg:  # Assistant message
+                                        messages.append({"role": "assistant", "content": assistant_msg})
                         
                         try:
                             # Send chat request to OpenAI
@@ -667,15 +755,15 @@ class GradioChatbotWithMinutes:
                             )
                             
                             response_text = response.choices[0].message.content
-                            return history + [[message, response_text]]
+                            return history + [(message, response_text)]
                         except Exception as e:
                             logger.error(f"Error with OpenAI chat: {str(e)}")
-                            return history + [[message, f"Error with OpenAI chat: {str(e)}"]]
+                            return history + [(message, f"Error with OpenAI chat: {str(e)}")]
                     
                     return history
                 except Exception as e:
                     logger.error(f"Error in chat: {str(e)}")
-                    return history + [[message, f"Error: {str(e)}"]]
+                    return history + [(message, f"Error: {str(e)}")]
             
             # Connect the chat input and submit button
             chat_input.submit(
