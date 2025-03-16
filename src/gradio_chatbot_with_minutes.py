@@ -11,6 +11,7 @@ import json
 import gradio as gr
 from typing import Dict, Any, List, Optional, Tuple
 import uuid
+from datetime import datetime
 
 from src.transcription.whisper_transcriber import OpenAIWhisperService, TranscriptionSettings
 from src.meeting_minutes.meeting_summarizer import MeetingSummarizer
@@ -112,27 +113,44 @@ class GradioChatbotWithMinutes:
         try:
             # Update settings
             self.settings = {
-                "openai_api_key": api_key,
-                "whisper_model": model,
-                "language": language,
-                "anything_llm_url": anything_llm_url,
-                "anything_llm_api_key": anything_llm_api_key,
-                "anything_llm_workspace": anything_llm_workspace
+                "openai_api_key": api_key.strip() if api_key else "",
+                "whisper_model": model.strip() if model else "whisper-1",
+                "language": language.strip() if language else "en",
+                "anything_llm_url": anything_llm_url.strip() if anything_llm_url else "http://localhost:3001",
+                "anything_llm_api_key": anything_llm_api_key.strip() if anything_llm_api_key else "",
+                "anything_llm_workspace": anything_llm_workspace.strip() if anything_llm_workspace else "default"
             }
             
             # Save to file
-            with open("settings.json", "w") as f:
-                json.dump(self.settings, f)
+            try:
+                with open("settings.json", "w") as f:
+                    json.dump(self.settings, f, indent=2)
+                logger.info("Settings saved successfully")
+            except Exception as e:
+                logger.error(f"Error saving settings to file: {str(e)}")
+                return f"Error saving settings: {str(e)}"
             
             # Initialize OpenAI client
-            self.openai_client = self.initialize_openai_client()
+            try:
+                if api_key:
+                    self.openai_client = self.initialize_openai_client()
+                    logger.info("OpenAI client initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing OpenAI client: {str(e)}")
+                return f"Error initializing OpenAI client: {str(e)}"
             
             # Initialize AnythingLLM client
-            self.anything_llm_client = self.initialize_anything_llm_client()
+            try:
+                if anything_llm_url and anything_llm_api_key:
+                    self.anything_llm_client = self.initialize_anything_llm_client()
+                    logger.info("AnythingLLM client initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing AnythingLLM client: {str(e)}")
+                # Don't return error here, just log it - we can still function without AnythingLLM
             
-            return "Settings saved successfully"
+            return "Settings saved successfully. You can now use the application."
         except Exception as e:
-            logger.error(f"Error saving settings: {str(e)}")
+            logger.error(f"Error in save_settings: {str(e)}")
             return f"Error saving settings: {str(e)}"
     
     def create_interface(self):
@@ -194,12 +212,26 @@ class GradioChatbotWithMinutes:
                 
                 # Meeting Minutes tab
                 with gr.TabItem("Meeting Minutes"):
+                    gr.Markdown("## Meeting Minutes Generator")
+                    gr.Markdown("Generate meeting minutes from transcripts.")
+                    
                     with gr.Row():
                         with gr.Column(scale=1):
+                            # Add dropdown for selecting transcripts
+                            transcript_dropdown = gr.Dropdown(
+                                label="Select Transcript",
+                                choices=self.get_transcript_choices(),
+                                interactive=True
+                            )
+                            
+                            # Refresh button for the dropdown
+                            refresh_dropdown_button = gr.Button("Refresh Transcripts")
+                            
                             minutes_transcript_id = gr.Textbox(
                                 label="Transcript ID",
                                 placeholder="ID of the transcript to summarize",
-                                interactive=False
+                                interactive=False,
+                                visible=False  # Hide this since we're using the dropdown
                             )
                             minutes_meeting_name = gr.Textbox(
                                 label="Meeting Name",
@@ -290,8 +322,22 @@ class GradioChatbotWithMinutes:
             # Meeting Minutes tab
             generate_minutes_button.click(
                 self.generate_minutes,
-                inputs=[minutes_transcript_id, minutes_meeting_name],
+                inputs=[transcript_dropdown, minutes_meeting_name],  # Use dropdown instead of transcript ID
                 outputs=[minutes_output, minutes_info, minutes_transcript_text]
+            )
+            
+            # Add event handler for transcript dropdown selection
+            transcript_dropdown.change(
+                self.load_transcript_for_minutes,
+                inputs=[transcript_dropdown],
+                outputs=[minutes_transcript_text, minutes_meeting_name]
+            )
+            
+            # Add event handler for refreshing the transcript dropdown
+            refresh_dropdown_button.click(
+                self.refresh_transcript_dropdown,
+                inputs=[],
+                outputs=[transcript_dropdown]
             )
             
             refresh_minutes_button.click(
@@ -423,7 +469,7 @@ class GradioChatbotWithMinutes:
             
             # Check connection on tab load
             def update_connection_status():
-                if self.anything_llm_client and self.anything_llm_client.check_connection():
+                if self.anything_llm_client and self.check_anything_llm_connection():
                     return "✅ AnythingLLM Status: Connected"
                 else:
                     return "❌ AnythingLLM Status: Not connected. Please check your settings."
@@ -463,27 +509,24 @@ class GradioChatbotWithMinutes:
                     info="When enabled, includes data from local meeting storage in the prompt"
                 )
             
-            def chat_with_meetings(message, history, mode, include_local_data):
-                """Process a chat message and respond with relevant meeting information"""
-                if not message.strip():
+            def chat_with_meetings(message, history, mode="chat", include_local_data=True):
+                """Chat with meeting data"""
+                if not message:
                     return history
                 
-                # Add user message to history
-                history.append([message, None])
-                
                 try:
-                    # Check if AnythingLLM is connected
-                    if not self.anything_llm_client.check_connection():
-                        response = "AnythingLLM is not connected. Please check your settings in the Settings tab."
-                        history[-1][1] = response
-                        return history
+                    # Check if we have an OpenAI API key
+                    openai_api_key = self.settings.get("openai_api_key")
+                    if not openai_api_key:
+                        return history + [[message, "OpenAI API key not set. Please add your API key in the Settings tab."]]
                     
                     # Prepare the message with local context if enabled
                     enhanced_message = message
+                    system_message = "You are a helpful assistant that specializes in analyzing meeting transcripts and minutes."
+                    local_context = ""
                     
                     if include_local_data:
                         # Get local context if requested
-                        local_context = ""
                         if hasattr(self.transcript_storage, 'search_transcripts') and hasattr(self.transcript_storage, 'search_minutes'):
                             # Search transcripts
                             transcript_results = self.transcript_storage.search_transcripts(message, top_n=3, score_threshold=0.6)
@@ -501,7 +544,7 @@ class GradioChatbotWithMinutes:
                             context_parts = []
                             for result in all_results[:3]:  # Limit to top 3 results
                                 result_type = "Transcript" if result["id"] in [r["id"] for r in transcript_results] else "Minutes"
-                                meeting_name = result["metadata"].get("meeting_name", "Unnamed Meeting")
+                                meeting_name = result["metadata"].get("meeting_name", "Unnamed Meeting") if isinstance(result.get("metadata"), dict) else "Unnamed Meeting"
                                 
                                 # Truncate text to a reasonable length
                                 text = result["text"]
@@ -514,34 +557,125 @@ class GradioChatbotWithMinutes:
                         else:
                             # Fallback to basic context retrieval
                             transcripts = self.transcript_storage.get_all_transcripts()
+                            local_context = ""
+                            
+                            # First add meeting minutes for context
+                            if hasattr(self.transcript_storage, 'get_all_meeting_minutes'):
+                                minutes_data = self.transcript_storage.get_all_meeting_minutes()
+                                if minutes_data and "minutes" in minutes_data:
+                                    minutes_list = minutes_data["minutes"]
+                                    # Sort by creation date if available
+                                    if all(isinstance(m.get("created_at"), str) for m in minutes_list if "created_at" in m):
+                                        try:
+                                            minutes_list.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+                                        except Exception as e:
+                                            logger.warning(f"Could not sort minutes by date: {str(e)}")
+                                    
+                                    # Add the most recent minutes first (up to 2)
+                                    for minutes in minutes_list[:2]:
+                                        minutes_id = minutes.get("id")
+                                        if minutes_id:
+                                            minutes_text = self.transcript_storage.get_meeting_minutes_text(minutes_id)
+                                            if minutes_text:
+                                                # Truncate text to a reasonable length
+                                                if len(minutes_text) > 1000:
+                                                    minutes_text = minutes_text[:1000] + "..."
+                                                
+                                                meeting_name = minutes.get("meeting_name", "")
+                                                if not meeting_name and isinstance(minutes.get("metadata"), dict):
+                                                    meeting_name = minutes["metadata"].get("meeting_name", "Unnamed Meeting")
+                                                
+                                                local_context += f"--- Meeting Minutes: {meeting_name} ---\n{minutes_text}\n\n"
+                            
+                            # Then add transcripts
                             if "transcripts" in transcripts:
                                 for transcript in transcripts["transcripts"][:2]:  # Limit to 2 transcripts
                                     transcript_id = transcript.get("id")
                                     if transcript_id:
                                         transcript_text = self.transcript_storage.get_transcript_text(transcript_id)
                                         if transcript_text:
-                                            local_context += f"--- Transcript {transcript_id} ---\n{transcript_text[:1000]}...\n\n"
+                                            # Truncate text to a reasonable length
+                                            if len(transcript_text) > 1000:
+                                                transcript_text = transcript_text[:1000] + "..."
+                                            
+                                            meeting_name = transcript.get("meeting_name", "")
+                                            if not meeting_name and isinstance(transcript.get("metadata"), dict):
+                                                meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
+                                            
+                                            local_context += f"--- Transcript: {meeting_name} ---\n{transcript_text}\n\n"
                         
                         if local_context:
-                            enhanced_message = f"I'm providing some relevant meeting information for context:\n\n{local_context}\n\nBased on this context, please answer: {message}"
+                            system_message = f"""You are a helpful assistant that specializes in analyzing meeting transcripts and minutes.
+                            
+                            Here is some relevant context from meeting transcripts and minutes:
+                            
+                            {local_context}
+                            
+                            Use this context to answer the user's questions when relevant."""
+                            enhanced_message = f"Based on the provided context, please answer: {message}"
                     
-                    # Send to AnythingLLM
-                    response = self.anything_llm_client.chat(message=enhanced_message, mode=mode)
+                    # First try AnythingLLM if it's available
+                    anything_llm_working = False
+                    if self.anything_llm_client and self.check_anything_llm_connection():
+                        try:
+                            # Prepare message for AnythingLLM
+                            if local_context:
+                                anything_llm_message = f"I'm providing some relevant meeting information for context:\n\n{local_context}\n\nBased on this context, please answer: {message}"
+                            else:
+                                anything_llm_message = message
+                            
+                            # Send chat request to AnythingLLM
+                            response_data = self.anything_llm_client.chat(anything_llm_message, mode=mode)
+                            
+                            if response_data.get("success"):
+                                response = response_data.get("response", "")
+                                if response.strip():  # Check if we got a non-empty response
+                                    anything_llm_working = True
+                                    return history + [[message, response]]
+                        except Exception as e:
+                            logger.warning(f"AnythingLLM chat failed, falling back to OpenAI: {str(e)}")
                     
-                    # Extract response text
-                    if isinstance(response, dict):
-                        response_text = response.get("textResponse", "No response received")
-                    else:
-                        response_text = str(response)
+                    # If AnythingLLM failed or is not available, use OpenAI directly
+                    if not anything_llm_working:
+                        logger.info("Using OpenAI for chat (AnythingLLM not available or failed)")
+                        
+                        # Create messages for OpenAI chat
+                        messages = [
+                            {"role": "system", "content": system_message},
+                            {"role": "user", "content": enhanced_message}
+                        ]
+                        
+                        # Add chat history for context if in chat mode
+                        if mode == "chat" and len(history) > 1:
+                            # Add up to 5 previous exchanges (10 messages) for context
+                            for i in range(max(0, len(history) - 5), len(history)):
+                                if history[i][0]:  # User message
+                                    messages.append({"role": "user", "content": history[i][0]})
+                                if history[i][1]:  # Assistant message
+                                    messages.append({"role": "assistant", "content": history[i][1]})
+                        
+                        try:
+                            # Send chat request to OpenAI
+                            import openai
+                            client = openai.OpenAI(api_key=openai_api_key)
+                            
+                            response = client.chat.completions.create(
+                                model="gpt-3.5-turbo",  # You can change this to a different model if needed
+                                messages=messages,
+                                temperature=0.7,
+                                max_tokens=1000
+                            )
+                            
+                            response_text = response.choices[0].message.content
+                            return history + [[message, response_text]]
+                        except Exception as e:
+                            logger.error(f"Error with OpenAI chat: {str(e)}")
+                            return history + [[message, f"Error with OpenAI chat: {str(e)}"]]
                     
-                    # Update history with the response
-                    history[-1][1] = response_text
-                    
+                    return history
                 except Exception as e:
                     logger.error(f"Error in chat: {str(e)}")
-                    history[-1][1] = f"Error: {str(e)}"
-                
-                return history
+                    return history + [[message, f"Error: {str(e)}"]]
             
             # Connect the chat input and submit button
             chat_input.submit(
@@ -577,51 +711,70 @@ class GradioChatbotWithMinutes:
                     """Upload a transcript and its minutes to AnythingLLM"""
                     if not transcript_id:
                         return "Please select a transcript to upload."
-                    
+                     
+                    # First check if AnythingLLM is connected
+                    if not self.anything_llm_client or not self.check_anything_llm_connection():
+                        return "❌ AnythingLLM is not connected. Please check your settings and ensure AnythingLLM server is running."
+                     
                     try:
                         # Get the transcript and minutes
                         transcript = self.transcript_storage.get_transcript(transcript_id)
                         if not transcript:
                             return "Transcript not found."
-                        
+                         
                         transcript_text = self.transcript_storage.get_transcript_text(transcript_id)
                         if not transcript_text:
                             return "Transcript text not found."
-                        
+                         
                         # Check if there are meeting minutes
                         minutes = self.transcript_storage.get_meeting_minutes_by_transcript_id(transcript_id)
                         minutes_text = ""
                         if minutes:
                             minutes_text = self.transcript_storage.get_meeting_minutes_text(minutes["id"])
-                        
+                         
+                        # Get meeting name from transcript metadata
+                        meeting_name = "Unnamed Meeting"
+                        if "meeting_name" in transcript:
+                            meeting_name = transcript.get("meeting_name")
+                        elif "metadata" in transcript and isinstance(transcript["metadata"], dict):
+                            meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
+                         
                         # Create a temporary file with the content
-                        meeting_name = transcript.get("meeting_name", f"Meeting {transcript_id}")
                         temp_file_path = f"temp_meeting_{transcript_id}.md"
-                        
+                         
                         with open(temp_file_path, "w", encoding="utf-8") as f:
                             f.write(f"# {meeting_name}\n\n")
-                            
+                             
                             if minutes_text:
                                 f.write(f"## Meeting Minutes\n\n{minutes_text}\n\n")
-                            
+                             
                             f.write(f"## Full Transcript\n\n{transcript_text}\n\n")
-                        
+                         
                         # Upload to AnythingLLM
+                        logger.info(f"Uploading {meeting_name} to AnythingLLM...")
                         result = self.anything_llm_client.upload_document(
                             file_path=temp_file_path,
                             file_name=f"{meeting_name}.md"
                         )
-                        
+                         
                         # Clean up the temporary file
                         if os.path.exists(temp_file_path):
                             os.remove(temp_file_path)
-                        
+                         
                         if result and result.get("success", False):
                             return f"✅ Successfully uploaded {meeting_name} to AnythingLLM."
                         else:
                             error = result.get("error", "Unknown error")
-                            return f"❌ Failed to upload to AnythingLLM: {error}"
-                    
+                            logger.error(f"Failed to upload to AnythingLLM: {error}")
+                             
+                            # Provide a more helpful error message for common issues
+                            if "404" in str(error):
+                                return f"❌ Failed to upload to AnythingLLM: The API endpoint was not found (404 error). This may indicate that the AnythingLLM server is running but the document upload feature is not available or the API has changed."
+                            elif "Connection" in str(error):
+                                return f"❌ Failed to upload to AnythingLLM: Connection error. Please check that the AnythingLLM server is running and accessible."
+                            else:
+                                return f"❌ Failed to upload to AnythingLLM: {error}"
+                     
                     except Exception as e:
                         logger.error(f"Error uploading to AnythingLLM: {str(e)}")
                         return f"❌ Error: {str(e)}"
@@ -637,20 +790,46 @@ class GradioChatbotWithMinutes:
         try:
             result = self.transcript_storage.get_all_transcripts()
             if not result or not isinstance(result, dict) or "transcripts" not in result:
-                return []
+                logger.warning("No transcripts found or invalid result format")
+                return [("Select a transcript", "")]
             
             transcripts = result.get("transcripts", [])
             
-            choices = []
+            choices = [("Select a transcript", "")]  # Add a default option
             for transcript in transcripts:
-                meeting_name = transcript.get("meeting_name", "Unnamed Meeting")
+                # Get meeting name from metadata if available
+                meeting_name = "Unnamed Meeting"
+                if "meeting_name" in transcript:
+                    meeting_name = transcript.get("meeting_name")
+                elif "metadata" in transcript and isinstance(transcript["metadata"], dict):
+                    meeting_name = transcript["metadata"].get("meeting_name", "Unnamed Meeting")
+                
+                # Get creation date if available
+                created_at = ""
+                if "created_at" in transcript:
+                    created_at = transcript.get("created_at")
+                elif "metadata" in transcript and isinstance(transcript["metadata"], dict):
+                    created_at = transcript["metadata"].get("created_at", "")
+                
+                # Format the date if it exists
+                date_str = ""
+                if created_at:
+                    try:
+                        # Try to parse the date and format it
+                        if isinstance(created_at, str):
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            date_str = f" - {dt.strftime('%Y-%m-%d %H:%M')}"
+                    except Exception as e:
+                        logger.warning(f"Could not parse date: {str(e)}")
+                
                 transcript_id = transcript.get("id")
-                choices.append((f"{meeting_name} ({transcript_id})", transcript_id))
+                if transcript_id:
+                    choices.append((f"{meeting_name}{date_str} ({transcript_id})", transcript_id))
             
             return choices
         except Exception as e:
             logger.error(f"Error getting transcript choices: {str(e)}")
-            return []
+            return [("Select a transcript", "")]
     
     def transcribe_audio(self, audio_path: str, meeting_name: Optional[str] = None) -> Tuple[str, Dict[str, Any], bool]:
         """
@@ -927,15 +1106,36 @@ class GradioChatbotWithMinutes:
         Returns:
             Tuple of (meeting minutes, minutes info, transcript text)
         """
-        if not transcript_id:
-            return "No transcript ID provided", None, ""
+        logger.info(f"Generating minutes for transcript ID: {transcript_id}")
         
-        if not self.openai_client:
-            return "OpenAI API key not set. Please configure it in the Settings tab.", None, ""
+        if not transcript_id:
+            logger.warning("No transcript ID provided for generating minutes")
+            return "Please select a transcript from the dropdown", None, ""
         
         try:
-            # Generate summary from the transcript ID
-            result = MeetingSummarizer().generate_summary_from_transcript_id(
+            # Get the transcript text
+            transcript_data = self.transcript_storage.get_transcript(transcript_id)
+            if not transcript_data:
+                logger.error(f"Failed to retrieve transcript with ID: {transcript_id}")
+                return f"Failed to load transcript: Transcript with ID {transcript_id} not found", None, ""
+            
+            transcript_text = transcript_data.get("text", "")
+            if not transcript_text:
+                logger.error(f"No text found in transcript with ID: {transcript_id}")
+                return "Failed to load transcript: No text found in transcript", None, ""
+            
+            # Use the provided meeting name or get it from the transcript
+            if not meeting_name:
+                meeting_name = transcript_data.get("meeting_name", "")
+            
+            # Generate summary
+            summarizer = MeetingSummarizer()
+            
+            # Check if OpenAI API key is set
+            if not summarizer.is_available():
+                return "OpenAI API key not set. Please configure it in the Settings tab.", None, transcript_text
+            
+            result = summarizer.generate_summary_from_transcript_id(
                 transcript_id=transcript_id,
                 transcript_storage=self.transcript_storage,
                 meeting_name=meeting_name
@@ -943,20 +1143,23 @@ class GradioChatbotWithMinutes:
             
             if not result.get("success"):
                 error_message = result.get("error", "Unknown error")
-                return f"Summarization failed: {error_message}", None, ""
+                logger.error(f"Failed to generate minutes: {error_message}")
+                return f"Failed to generate minutes: {error_message}", None, transcript_text
             
             # Return the formatted minutes and info
-            transcript_text = self.transcript_storage.get_transcript_text(transcript_id)
-            return result.get("formatted_minutes"), {
-                "minutes_id": result.get("minutes_id"),
-                "transcript_id": result.get("transcript_id"),
-                "meeting_name": result.get("meeting_name"),
-                "structure": result.get("structure")
-            }, transcript_text
+            formatted_minutes = result.get("formatted_minutes", "")
+            minutes_info = {
+                "minutes_id": result.get("minutes_id", ""),
+                "transcript_id": result.get("transcript_id", ""),
+                "meeting_name": result.get("meeting_name", ""),
+                "structure": result.get("structure", {})
+            }
+            
+            return formatted_minutes, minutes_info, transcript_text
         
         except Exception as e:
-            logger.error(f"Summarization failed: {str(e)}")
-            return f"Summarization failed: {str(e)}", None, ""
+            logger.error(f"Error generating minutes: {str(e)}")
+            return f"Error generating minutes: {str(e)}", None, ""
     
     def refresh_minutes(self) -> List[List[Any]]:
         """
@@ -1084,6 +1287,94 @@ class GradioChatbotWithMinutes:
         except Exception as e:
             logger.error(f"Failed to delete minutes: {str(e)}")
             return self.refresh_minutes()
+    
+    def refresh_transcript_dropdown(self) -> List[Tuple[str, str]]:
+        """
+        Refresh the transcript dropdown
+        
+        Returns:
+            List of transcript choices
+        """
+        return self.get_transcript_choices()
+    
+    def load_transcript_for_minutes(self, transcript_id: str) -> Tuple[str, str]:
+        """
+        Load a transcript for the meeting minutes page
+        
+        Args:
+            transcript_id: ID of the transcript
+        
+        Returns:
+            Tuple of (transcript text, meeting name)
+        """
+        logger.info(f"Loading transcript for minutes with ID: {transcript_id}")
+        
+        if not transcript_id:
+            logger.warning("No transcript ID provided")
+            return "No transcript selected", ""
+        
+        try:
+            # First try to get the transcript text directly
+            transcript_text = self.transcript_storage.get_transcript_text(transcript_id)
+            
+            if not transcript_text:
+                logger.warning(f"No text found using get_transcript_text for ID: {transcript_id}")
+                # Try getting the full transcript object as fallback
+                transcript_data = self.transcript_storage.get_transcript(transcript_id)
+                
+                if not transcript_data:
+                    logger.error(f"Failed to retrieve transcript with ID: {transcript_id}")
+                    return f"Failed to load transcript: Transcript with ID {transcript_id} not found", ""
+                
+                # Extract text from the transcript data
+                transcript_text = transcript_data.get("text", "")
+                if not transcript_text:
+                    logger.error(f"No text found in transcript data for ID: {transcript_id}")
+                    return "Failed to load transcript: No text found in transcript", ""
+            
+            # Get the meeting name
+            meeting_name = ""
+            try:
+                # Try to get the meeting name from the transcript data
+                transcript_data = self.transcript_storage.get_transcript(transcript_id)
+                if transcript_data:
+                    # Check if meeting_name is in the root or in metadata
+                    if "meeting_name" in transcript_data:
+                        meeting_name = transcript_data.get("meeting_name")
+                    elif "metadata" in transcript_data and isinstance(transcript_data["metadata"], dict):
+                        meeting_name = transcript_data["metadata"].get("meeting_name", "")
+            except Exception as e:
+                logger.warning(f"Could not get meeting name for transcript {transcript_id}: {str(e)}")
+            
+            logger.info(f"Successfully loaded transcript for minutes with ID: {transcript_id}")
+            return transcript_text, meeting_name
+        
+        except Exception as e:
+            logger.error(f"Error loading transcript for minutes: {str(e)}")
+            return f"Failed to load transcript: {str(e)}", ""
+    
+    def check_anything_llm_connection(self):
+        """
+        Check if AnythingLLM is connected and working
+        
+        Returns:
+            bool: True if connected, False otherwise
+        """
+        if not self.anything_llm_client:
+            return False
+        
+        try:
+            # Try to ping the AnythingLLM server
+            result = self.anything_llm_client.check_connection()
+            if result:
+                logger.info("AnythingLLM connection successful")
+                return True
+            else:
+                logger.warning("AnythingLLM connection check failed")
+                return False
+        except Exception as e:
+            logger.warning(f"Error checking AnythingLLM connection: {str(e)}")
+            return False
     
     def launch(self, inbrowser=True):
         """
